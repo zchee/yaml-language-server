@@ -22,7 +22,7 @@ import Strings = require('./languageservice/utils/strings');
 import { getLineOffsets, removeDuplicatesObj } from './languageservice/utils/arrUtils';
 import { getLanguageService as getCustomLanguageService, LanguageSettings, CustomFormatterOptions } from './languageservice/yamlLanguageService';
 import * as nls from 'vscode-nls';
-import { FilePatternAssociation, CustomSchemaProvider } from './languageservice/services/jsonSchemaService';
+import { FilePatternAssociation } from './languageservice/services/jsonSchemaService';
 import { parse as parseYAML } from './languageservice/parser/yamlParser';
 import { JSONDocument } from './languageservice/parser/jsonParser';
 import { JSONSchema } from './languageservice/jsonSchema';
@@ -36,20 +36,8 @@ namespace SchemaAssociationNotification {
 	export const type: NotificationType<{}, {}> = new NotificationType('json/schemaAssociations');
 }
 
-namespace DynamicCustomSchemaRequestRegistration {
-	export const type: NotificationType<{}, {}> = new NotificationType('yaml/registerCustomSchemaRequest');
-}
-
 namespace VSCodeContentRequest {
 	export const type: RequestType<{}, {}, {}, {}> = new RequestType('vscode/content');
-}
-
-namespace CustomSchemaContentRequest {
-	export const type: RequestType<{}, {}, {}, {}> = new RequestType('custom/schema/content');
-}
-
-namespace CustomSchemaRequest {
-	export const type: RequestType<{}, {}, {}, {}> = new RequestType('custom/schema/request');
 }
 
 namespace ColorSymbolRequest {
@@ -146,12 +134,6 @@ let schemaRequestService = (uri: string): Thenable<string> => {
 		}, error => {
 			return error.message;
 		});
-	} else {
-		let scheme = URI.parse(uri).scheme.toLowerCase();
-		if (scheme !== 'http' && scheme !== 'https') {
-			// custom scheme
-			return <Thenable<string>>connection.sendRequest(CustomSchemaContentRequest.type, uri);
-		}
 	}
 	if (uri.indexOf('//schema.management.azure.com/') !== -1) {
 		connection.telemetry.logEvent({
@@ -169,8 +151,6 @@ let schemaRequestService = (uri: string): Thenable<string> => {
 	});
 };
 
-export let KUBERNETES_SCHEMA_URL = "https://gist.githubusercontent.com/JPinkney/ccaf3909ef811e5657ca2e2e1fa05d76/raw/f85e51bfb67fdb99ab7653c2953b60087cc871ea/openshift_schema_all.json";
-export let KEDGE_SCHEMA_URL = "https://raw.githubusercontent.com/kedgeproject/json-schema/master/master/kedge-json-schema.json";
 export let customLanguageService = getCustomLanguageService(schemaRequestService, workspaceContext, []);
 
 // The settings interface describes the server relevant settings part
@@ -312,11 +292,6 @@ connection.onNotification(SchemaAssociationNotification.type, associations => {
 	updateConfiguration();
 });
 
-connection.onNotification(DynamicCustomSchemaRequestRegistration.type, () => {
-	const schemaProvider = ((resource) => connection.sendRequest(CustomSchemaRequest.type, resource)) as CustomSchemaProvider;
-	customLanguageService.registerCustomSchemaProvider(schemaProvider);
-});
-
 function updateConfiguration() {
 	let languageSettings: LanguageSettings = {
 		validate: yamlShouldValidate,
@@ -363,26 +338,10 @@ function updateConfiguration() {
 }
 
 function configureSchemas(uri, fileMatch, schema, languageSettings){
-
-	if(uri.toLowerCase().trim() === "kubernetes"){
-		uri = KUBERNETES_SCHEMA_URL;
-	}
-	if(uri.toLowerCase().trim() === "kedge"){
-		uri = KEDGE_SCHEMA_URL;
-	}
-
 	if(schema === null){
 		languageSettings.schemas.push({ uri, fileMatch: fileMatch });
 	}else{
 		languageSettings.schemas.push({ uri, fileMatch: fileMatch, schema: schema });
-	}
-
-	if(fileMatch.constructor === Array && uri === KUBERNETES_SCHEMA_URL){
-		fileMatch.forEach((url) => {
-			specificValidatorPaths.push(url);
-		});
-	}else if(uri === KUBERNETES_SCHEMA_URL){
-		specificValidatorPaths.push(fileMatch);
 	}
 
 	return languageSettings;

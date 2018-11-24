@@ -4,7 +4,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { JSONSchemaService, CustomSchemaProvider } from './services/jsonSchemaService'
+import { JSONSchemaService } from './services/jsonSchemaService'
 import { TextDocument, Position, CompletionList, Diagnostic } from 'vscode-languageserver-types';
 import { JSONSchema } from './jsonSchema';
 import { YAMLDocumentSymbols } from './services/documentSymbols';
@@ -100,8 +100,7 @@ export interface CustomFormatterOptions {
 
 export interface LanguageService {
   configure(settings): void;
-  registerCustomSchemaProvider(schemaProvider: CustomSchemaProvider): void; // Register a custom schema provider
-	doComplete(document: TextDocument, position: Position, doc): Thenable<CompletionList>;
+  doComplete(document: TextDocument, position: Position, doc): Thenable<CompletionList>;
   doValidation(document: TextDocument, yamlDocument): Thenable<Diagnostic[]>;
   doHover(document: TextDocument, position: Position, doc);
   findDocumentSymbols(document: TextDocument, doc);
@@ -132,9 +131,6 @@ export function getLanguageService(schemaRequestService, workspaceContext, contr
         hover.configure(settings);
         let customTagsSetting = settings && settings["customTags"] ? settings["customTags"] : [];
         completer.configure(settings, customTagsSetting);
-      },
-      registerCustomSchemaProvider: (schemaProvider: CustomSchemaProvider) => {
-        schemaService.registerCustomSchemaProvider(schemaProvider);
       },
       doComplete: completer.doComplete.bind(completer),
       doResolve: completer.doResolve.bind(completer),

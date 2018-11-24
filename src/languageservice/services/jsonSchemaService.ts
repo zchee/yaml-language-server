@@ -74,8 +74,6 @@ export interface ISchemaContributions {
 	schemaAssociations?: ISchemaAssociations;
 }
 
-export declare type CustomSchemaProvider = (uri: string) => Thenable<string>;
-
 export interface ISchemaHandle {
 	/**
 	 * The schema id
@@ -243,24 +241,18 @@ export class JSONSchemaService implements IJSONSchemaService {
 	private callOnDispose: Function[];
 	private requestService: SchemaRequestService;
 	private promiseConstructor: PromiseConstructor;
-	private customSchemaProvider: CustomSchemaProvider | undefined;
 
 	constructor(requestService: SchemaRequestService, contextService?: WorkspaceContextService, promiseConstructor?: PromiseConstructor) {
 		this.contextService = contextService;
 		this.requestService = requestService;
 		this.promiseConstructor = promiseConstructor || Promise;
 		this.callOnDispose = [];
-		this.customSchemaProvider = undefined;
 		this.contributionSchemas = {};
 		this.contributionAssociations = {};
 		this.schemasById = {};
 		this.filePatternAssociations = [];
 		this.filePatternAssociationById = {};
 		this.registeredSchemasIds = {};
-	}
-
-	registerCustomSchemaProvider(customSchemaProvider: CustomSchemaProvider) {
-		this.customSchemaProvider = customSchemaProvider;
 	}
 
 	public getRegisteredSchemaIds(filter?: (scheme) => boolean): string[] {
@@ -514,25 +506,14 @@ export class JSONSchemaService implements IJSONSchemaService {
 	}
 
 	public getSchemaForResource(resource: string ): Thenable<ResolvedSchema> {
-		const resolveSchema = () => {
-			// check for matching file names, last to first
-			for (let i = this.filePatternAssociations.length - 1; i >= 0; i--) {
-				let entry = this.filePatternAssociations[i];
-				if (entry.matchesPattern(resource)) {
-					return entry.getCombinedSchema(this).getResolvedSchema();
-				}
+		// check for matching file names, last to first
+		for (let i = this.filePatternAssociations.length - 1; i >= 0; i--) {
+			let entry = this.filePatternAssociations[i];
+			if (entry.matchesPattern(resource)) {
+				return entry.getCombinedSchema(this).getResolvedSchema();
 			}
-			return this.promise.resolve(null);
-		};
-		if (this.customSchemaProvider) {
-			return this.customSchemaProvider(resource).then(schemaUri => {
-				return this.loadSchema(schemaUri).then(unsolvedSchema => this.resolveSchemaContent(unsolvedSchema, schemaUri));
-			}).then(schema => schema, err => {
-				return resolveSchema();
-			});
-		} else {
-			return resolveSchema();
 		}
+		return this.promise.resolve(null);
 	}
 
 	public createCombinedSchema(combinedSchemaId: string, schemaIds: string[]): ISchemaHandle {
