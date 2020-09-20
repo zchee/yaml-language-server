@@ -206,7 +206,7 @@ export class YAMLCompletion extends JSONCompletion {
             kind: CompletionItemKind.Property,
             label: currentWord,
             insertText: this.getInsertTextForProperty(currentWord, null, false, separatorAfter),
-            insertTextFormat: InsertTextFormat.Snippet,
+            insertTextFormat: InsertTextFormat.PlainText,
             documentation: '',
           });
         }
@@ -269,7 +269,7 @@ export class YAMLCompletion extends JSONCompletion {
                     separatorAfter,
                     identCompensation + this.indentation
                   ),
-                  insertTextFormat: InsertTextFormat.Snippet,
+                  insertTextFormat: InsertTextFormat.PlainText,
                   documentation: propertySchema.description || '',
                 });
               }
@@ -382,8 +382,8 @@ export class YAMLCompletion extends JSONCompletion {
                 documentation: `Create an item of an array${
                   s.schema.description === undefined ? '' : '(' + s.schema.description + ')'
                 }`,
-                insertText: `- ${this.getInsertTextForObject(s.schema.items, separatorAfter).insertText.trimLeft()}`,
-                insertTextFormat: InsertTextFormat.Snippet,
+                insertText: `${this.getInsertTextForObject(s.schema.items, separatorAfter).insertText.trimLeft()}`,
+                insertTextFormat: InsertTextFormat.PlainText,
               });
               this.addSchemaValueCompletions(s.schema.items, separatorAfter, collector, types);
             } else {
@@ -451,7 +451,7 @@ export class YAMLCompletion extends JSONCompletion {
         kind: this.getSuggestionKind(type),
         label,
         insertText: this.getInsertTextForValue(value, separatorAfter, type),
-        insertTextFormat: InsertTextFormat.Snippet,
+        insertTextFormat: InsertTextFormat.PlainText,
         detail: localize('json.suggest.default', 'Default value'),
       });
       hasProposals = true;
@@ -468,7 +468,7 @@ export class YAMLCompletion extends JSONCompletion {
           kind: this.getSuggestionKind(type),
           label: value,
           insertText: this.getInsertTextForValue(value, separatorAfter, type),
-          insertTextFormat: InsertTextFormat.Snippet,
+          insertTextFormat: InsertTextFormat.PlainText,
         });
         hasProposals = true;
       });
@@ -559,7 +559,7 @@ export class YAMLCompletion extends JSONCompletion {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private getLabelForSnippetValue(value: any): string {
     const label = JSON.stringify(value);
-    return label.replace(/\$\{\d+:([^}]+)\}|\$\d+/g, '$1');
+    return label.replace(/\$\{\d+:([^}]+)\}|\$\d+/g, '');
   }
 
   private addCustomTagValueCompletion(collector: CompletionsCollector, separatorAfter: string, label: string): void {
@@ -567,7 +567,7 @@ export class YAMLCompletion extends JSONCompletion {
       kind: super.getSuggestionKind('string'),
       label: label,
       insertText: label + separatorAfter,
-      insertTextFormat: InsertTextFormat.Snippet,
+      insertTextFormat: InsertTextFormat.PlainText,
       documentation: '',
     });
   }
@@ -577,7 +577,7 @@ export class YAMLCompletion extends JSONCompletion {
       kind: this.getSuggestionKind('boolean'),
       label: value ? 'true' : 'false',
       insertText: this.getInsertTextForValue(value, separatorAfter, 'boolean'),
-      insertTextFormat: InsertTextFormat.Snippet,
+      insertTextFormat: InsertTextFormat.PlainText,
       documentation: '',
     });
   }
@@ -609,7 +609,7 @@ export class YAMLCompletion extends JSONCompletion {
       kind: this.getSuggestionKind('null'),
       label: 'null',
       insertText: 'null' + separatorAfter,
-      insertTextFormat: InsertTextFormat.Snippet,
+      insertTextFormat: InsertTextFormat.PlainText,
       documentation: '',
     });
   }
@@ -636,13 +636,13 @@ export class YAMLCompletion extends JSONCompletion {
     separatorAfter: string
   ): string {
     if (Array.isArray(value)) {
-      let insertText = '\n';
+      let insertText = '';
       for (const arrValue of value) {
         insertText += `${indent}- \${${navOrder.index++}:${arrValue}}\n`;
       }
       return insertText;
     } else if (typeof value === 'object') {
-      let insertText = '\n';
+      let insertText = '';
       for (const key in value) {
         if (Object.prototype.hasOwnProperty.call(value, key)) {
           const element = value[key];
@@ -673,7 +673,7 @@ export class YAMLCompletion extends JSONCompletion {
   ): InsertText {
     let insertText = '';
     if (!schema.properties) {
-      insertText = `${indent}$${insertIndex++}\n`;
+      insertText = `${indent}$${insertIndex++}`;
       return { insertText, insertIndex };
     }
 
@@ -694,13 +694,13 @@ export class YAMLCompletion extends JSONCompletion {
           case 'string':
           case 'number':
           case 'integer':
-            insertText += `${indent}${key}: $${insertIndex++}\n`;
+            insertText += `${indent}${key}: $${insertIndex++}`;
             break;
           case 'array':
             {
               const arrayInsertResult = this.getInsertTextForArray(propertySchema.items, separatorAfter, insertIndex++);
               insertIndex = arrayInsertResult.insertIndex;
-              insertText += `${indent}${key}:\n${indent}${this.indentation}- ${arrayInsertResult.insertText}\n`;
+              insertText += `${indent}${key}:${indent}${this.indentation}- ${arrayInsertResult.insertText}`;
             }
             break;
           case 'object':
@@ -712,7 +712,7 @@ export class YAMLCompletion extends JSONCompletion {
                 insertIndex++
               );
               insertIndex = objectInsertResult.insertIndex;
-              insertText += `${indent}${key}:\n${objectInsertResult.insertText}\n`;
+              insertText += `${indent}${key}:${objectInsertResult.insertText}`;
             }
             break;
         }
@@ -721,7 +721,7 @@ export class YAMLCompletion extends JSONCompletion {
           case 'boolean':
           case 'number':
           case 'integer':
-            insertText += `${indent}${key}: \${${insertIndex++}:${propertySchema.default}}\n`;
+            insertText += `${indent}${key}: \${${insertIndex++}:${propertySchema.default}}`;
             break;
           case 'string':
             insertText += `${indent}${key}: \${${insertIndex++}:${convertToStringValue(propertySchema.default)}}\n`;
@@ -734,7 +734,7 @@ export class YAMLCompletion extends JSONCompletion {
       }
     });
     if (insertText.trim().length === 0) {
-      insertText = `${indent}$${insertIndex++}\n`;
+      insertText = `${indent}$${insertIndex++}`;
     }
     insertText = insertText.trimRight() + separatorAfter;
     return { insertText, insertIndex };
@@ -758,14 +758,14 @@ export class YAMLCompletion extends JSONCompletion {
     }
     switch (schema.type) {
       case 'boolean':
-        insertText = `\${${insertIndex++}:false}`;
+        insertText = ``;
         break;
       case 'number':
       case 'integer':
-        insertText = `\${${insertIndex++}:0}`;
+        insertText = ``;
         break;
       case 'string':
-        insertText = `\${${insertIndex++}:""}`;
+        insertText = ``;
         break;
       case 'object':
         {
@@ -845,23 +845,23 @@ export class YAMLCompletion extends JSONCompletion {
       if (nValueProposals === 0) {
         switch (type) {
           case 'boolean':
-            value = ' $1';
+            value = ' ';
             break;
           case 'string':
-            value = ' $1';
+            value = ' ';
             break;
           case 'object':
-            value = `\n${this.indentation}`;
+            value = `${this.indentation}`;
             break;
           case 'array':
-            value = `\n${this.indentation}- `;
+            value = `${this.indentation}- `;
             break;
           case 'number':
           case 'integer':
-            value = ' ${1:0}';
+            value = ' ';
             break;
           case 'null':
-            value = ' ${1:null}';
+            value = ' ';
             break;
           default:
             return propertyText;
@@ -879,7 +879,7 @@ export class YAMLCompletion extends JSONCompletion {
     switch (typeof value) {
       case 'object':
         if (value === null) {
-          return '${1:null}' + separatorAfter;
+          return '' + separatorAfter;
         }
         return this.getInsertTextForValue(value, separatorAfter, type);
       case 'string': {
@@ -889,11 +889,11 @@ export class YAMLCompletion extends JSONCompletion {
         if (type === 'string') {
           snippetValue = convertToStringValue(snippetValue);
         }
-        return '${1:' + snippetValue + '}' + separatorAfter;
+        return snippetValue + separatorAfter;
       }
       case 'number':
       case 'boolean':
-        return '${1:' + value + '}' + separatorAfter;
+        return value + separatorAfter;
     }
     return this.getInsertTextForValue(value, separatorAfter, type);
   }
