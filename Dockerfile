@@ -4,8 +4,8 @@ WORKDIR /yaml-language-server
 
 COPY . .
 
-RUN yarn install && \
-    yarn run build
+RUN pnpm install && \
+    pnpm run build
 
 ENTRYPOINT [ "node", "./out/server/src/server.js" ]
 CMD [ "--stdio" ]
